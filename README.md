@@ -10,8 +10,9 @@ To generate the index simply
 git clone https://github.com/jonschlinkert/markdown-toc
 
 ```
+cd markdown-toc
 npm install
-node cli.js > index.md
+node cli.js <location of the file spec.md> > index.md
 ```
 
 Then simply copy and paste the **index.md** to the top of the **spec.md**
