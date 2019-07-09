@@ -15,7 +15,12 @@ npm install
 node cli.js <location of the file spec.md> > index.md
 ```
 
-Then simply copy and paste the **index.md** to the top of the **spec.md**
+```
+cat index.md spec.md > specindex.md
+```
+
+The above command simulates a
+copy and paste the **index.md** to the top of the **spec.md**
 and create a new file called **specindex.md**
 
 Eventually this could be automated into the flux doc build process.
