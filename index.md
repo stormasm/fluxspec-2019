@@ -82,7 +82,7 @@
     + [Table](#table)
     + [Stream of tables](#stream-of-tables)
     + [Missing values (null)](#missing-values-null)
-  * [Transformations](#transformations)
+    + [Transformations](#transformations)
     + [Built-in transformations](#built-in-transformations)
       - [From](#from)
       - [Buckets](#buckets)
