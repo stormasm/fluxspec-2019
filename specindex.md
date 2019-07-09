@@ -223,7 +223,9 @@
         * [Annotations](#annotations)
         * [Errors](#errors)
         * [Dialect options](#dialect-options)
-        * [Examples](#examples)# Flux Specification
+        * [Examples](#examples)
+
+# Flux Specification
 
 The following document specifies the Flux language and query execution.
 
@@ -1978,16 +1980,16 @@ from(bucket: "telegraf/autogen"):
 
 ##### Mode
 
-Mode produces the mode for a given column. Null is considered as a potential mode if it is present. If there are multiple modes, all of them are returned in a table in sorted order. 
+Mode produces the mode for a given column. Null is considered as a potential mode if it is present. If there are multiple modes, all of them are returned in a table in sorted order.
 If there is no mode, null is returned. The following data types are supported: string, float64, int64, uint64, bool, time.
 
-Mode has the following properties: 
+Mode has the following properties:
 
 | Name   | Type   | Description                                                                  |
 | ----   | ----   | -----------                                                                  |
 | column | string | Column is the column on which to track the mode.  Defaults to `_value`. |
 
-Example: 
+Example:
 ```
 from(bucket:"telegraf/autogen")
     |> filter(fn: (r) => r._measurement == "mem" AND
@@ -3295,10 +3297,10 @@ from(bucket: "telegraf/autogen")
 ```
 #### Elapsed
 
-Elapsed returns the elapsed time between subsequent records. 
+Elapsed returns the elapsed time between subsequent records.
 
-Given an input table, `elapsed` will return the same table with an additional `elapsed` column and without the first 
-record as elapsed time is not defined. 
+Given an input table, `elapsed` will return the same table with an additional `elapsed` column and without the first
+record as elapsed time is not defined.
 
 Elapsed has the following properties:
 
@@ -3308,7 +3310,7 @@ Elapsed has the following properties:
 | timeColumn  | string   | Name of the `flux.TTime` column on which to compute the elapsed time. Defaults to `_time`.|
 | columnName  | string   | Name of the column of elapsed times. Defaults to `elapsed`.
 
-Elapsed errors if the timeColumn cannot be found within the given table. 
+Elapsed errors if the timeColumn cannot be found within the given table.
 
 #### Increase
 
@@ -3537,7 +3539,7 @@ Contains has the following parameters:
 | value   | bool, int, uint, float, string, time          | The value to search for.     |
 | set     | array of bool, int, uint, float, string, time | The set of values to search. |
 
-Example: 
+Example:
     `contains(value:1, set:[1,2,3])` will return `true`.
 
 #### Stream/table functions
@@ -3813,7 +3815,7 @@ Returns a new string consisting of i copies of the string v.
 
 Example: `repeat("v: na", i: 2)` returns string `nana`.
 
-##### replace 
+##### replace
 
 Returns a copy of the string v with the first i non-overlapping instances of t replaced by u.
 
@@ -3849,7 +3851,7 @@ Slices v into all substrings separated by t and returns a slice of the substring
 
 Example: `splitN(v: "a,b,c", t: ",", i: 2)` returns []string `["a" "b,c"]`.
 
-##### substring 
+##### substring
 
 Returns substring as specified by the given indices start and end, based on utf code points.
 
@@ -3932,7 +3934,7 @@ Example: `findString(r: regexp.compile("foo.?"), v: "seafood fool")` returns the
 ##### findStringIndex
 
 Returns a two-element slice of integers defining the location of the leftmost match in v of the regular expression.
- 
+
 Example: `findStringIndex(r: regexp.compile("ab?"), v: "tablett")` returns the int array `[1 3]`.
 
 ##### getString
@@ -3957,7 +3959,7 @@ Example: `replaceAllString(r: regexp.compile("a(x*)b"), v: "-ab-axxb-", t: "T")`
 
 Return a string that escapes all regular expression metacharacters inside the argument text; the returned string is a regular expression matching the literal text.
 
-Example: `quoteMeta("Escaping symbols like: .+*?()|[]{}^$")` returns string `Escaping symbols like: \.\+\*\?\(\)\|\[\]\{\}\^\$`. 
+Example: `quoteMeta("Escaping symbols like: .+*?()|[]{}^$")` returns string `Escaping symbols like: \.\+\*\?\(\)\|\[\]\{\}\^\$`.
 
 ##### splitRegexp
 
