@@ -7,7 +7,7 @@
 
 To generate the index simply
 
-git clone this repo
+git clone this repo  
 git clone https://github.com/jonschlinkert/markdown-toc
 
 ```
