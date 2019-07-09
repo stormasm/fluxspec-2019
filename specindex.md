@@ -82,7 +82,7 @@
     + [Table](#table)
     + [Stream of tables](#stream-of-tables)
     + [Missing values (null)](#missing-values-null)
-    + [Transformations](#transformations)
+  * [Transformations](#transformations)
     + [Built-in transformations](#built-in-transformations)
       - [From](#from)
       - [Buckets](#buckets)
@@ -1606,7 +1606,7 @@ In order to perform such a check, Flux provides a built-in `exists` operator def
 * `exists x` returns false if `x` is _null_
 * `exists x` returns true if `x` is not _null_
 
-### Transformations
+## Transformations
 
 Transformations define a change to a stream.
 Transformations may consume an input stream and always produce a new output stream.

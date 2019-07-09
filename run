@@ -1,0 +1,3 @@
+node cli.js /tmp02/fluxspec/spec.md > /tmp02/fluxspec/index.md
+cd /tmp02/fluxspec
+cat index.md spec.md > specindex.md

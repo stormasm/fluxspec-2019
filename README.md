@@ -24,3 +24,12 @@ copy and paste the **index.md** to the top of the **spec.md**
 and create a new file called **specindex.md**
 
 Eventually this could be automated into the flux doc build process.
+
+### First step towards automation
+
+copy the bash script run to the markdown-toc repo
+
+```
+cd <the markdown-toc> repo
+bash run
+```
