@@ -5,6 +5,9 @@
 [original spec without an index](https://github.com/influxdata/flux/blob/master/docs/SPEC.md)
 * specindex.md is the index and the spec combined
 
+grab a new copy of **spec.md** and replace the older version
+in this repo.
+
 To generate the index simply
 
 git clone this repo  
