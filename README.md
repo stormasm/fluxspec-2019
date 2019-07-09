@@ -7,29 +7,28 @@
 
 To generate the index simply
 
+git clone this repo
 git clone https://github.com/jonschlinkert/markdown-toc
 
 ```
 cd markdown-toc
 npm install
-node cli.js <location of the file spec.md> > index.md
+cp ./../fluxspec/run .
+bash run
 ```
 
-```
+
+cp ./../fluxspec/run .
+node cli.js ./../fluxspec/spec.md > ./../fluxspec/index.md
+cd ./../fluxspec
 cat index.md spec.md > specindex.md
 ```
-
-The above command simulates a
-copy and paste the **index.md** to the top of the **spec.md**
-and create a new file called **specindex.md**
 
 Eventually this could be automated into the flux doc build process.
 
 ### First step towards automation
 
-copy the bash script run to the markdown-toc repo
-
 ```
-cd <the markdown-toc> repo
+cd fluxspec
 bash run
 ```
