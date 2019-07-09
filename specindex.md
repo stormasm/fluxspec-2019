@@ -224,7 +224,6 @@
         * [Errors](#errors)
         * [Dialect options](#dialect-options)
         * [Examples](#examples)
-
 # Flux Specification
 
 The following document specifies the Flux language and query execution.
