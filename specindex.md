@@ -99,6 +99,8 @@
         * [Integral](#integral)
         * [Mean](#mean)
         * [Median (aggregate)](#median-aggregate)
+        * [Moving Average](#moving-average)
+        * [Mode](#mode)
         * [Quantile (aggregate)](#quantile-aggregate)
         * [Skew](#skew)
         * [Spread](#spread)
@@ -142,6 +144,7 @@
       - [Cumulative sum](#cumulative-sum)
       - [Derivative](#derivative)
       - [Difference](#difference)
+      - [Elapsed](#elapsed)
       - [Increase](#increase)
       - [Distinct](#distinct)
       - [TimeShift](#timeshift)
@@ -179,6 +182,7 @@
         * [joinStr](#joinstr)
         * [lastIndex](#lastindex)
         * [lastIndexAny](#lastindexany)
+        * [strlen](#strlen)
         * [repeat](#repeat)
         * [replace](#replace)
         * [replaceAll](#replaceall)
@@ -186,6 +190,7 @@
         * [splitAfter](#splitafter)
         * [splitAfterN](#splitaftern)
         * [splitN](#splitn)
+        * [substring](#substring)
         * [title](#title)
         * [toLower](#tolower)
         * [toTitle](#totitle)
@@ -196,6 +201,15 @@
         * [trimRight](#trimright)
         * [trimSpace](#trimspace)
         * [trimSuffix](#trimsuffix)
+      - [Regexp Operations](#regexp-operations)
+        * [compile](#compile)
+        * [findString](#findstring)
+        * [findStringIndex](#findstringindex)
+        * [getString](#getstring)
+        * [matchRegexString](#matchregexstring)
+        * [replaceAllString](#replaceallstring)
+        * [quoteMeta](#quotemeta)
+        * [splitRegexp](#splitregexp)
     + [Composite data types](#composite-data-types)
     + [Triggers](#triggers)
     + [Execution model](#execution-model)
@@ -209,9 +223,7 @@
         * [Annotations](#annotations)
         * [Errors](#errors)
         * [Dialect options](#dialect-options)
-        * [Examples](#examples)
-
-# Flux Specification
+        * [Examples](#examples)# Flux Specification
 
 The following document specifies the Flux language and query execution.
 
@@ -889,10 +901,19 @@ Literals construct a value.
 
 Object literals construct a value with the object type.
 
-    ObjectLiteral = "{" PropertyList "}" .
-    PropertyList  = [ Property { "," Property } ] .
-    Property      = identifier [ ":" Expression ]
-                  | string_lit ":" Expression .
+    ObjectLiteral  = "{" ObjectBody "}" .
+    ObjectBody     = WithProperties | PropertyList .
+    WithProperties = identifier "with"  PropertyList .
+    PropertyList   = [ Property { "," Property } ] .
+    Property       = identifier [ ":" Expression ]
+                   | string_lit ":" Expression .
+
+Examples:
+
+    {a: 1, b: 2, c: 3}
+    {a, b, c}
+    {o with x: 5, y: 5}
+    {o with a, b}
 
 ##### Array literals
 
@@ -1927,6 +1948,55 @@ from(bucket: "telegraf/autogen")
 	|> median()
 ```
 
+##### Moving Average
+
+Moving Average is an aggregate operation.
+For each aggregated column, it means the values of the following records for a defined window range.
+Moving Average is defined as
+```
+movingAverage = (every, period, column="_value", tables=<-) =>
+    tables
+        |> window(every: every, period: period)
+        |> mean(column:column)
+        |> duplicate(column: "_stop", as: "_time")
+        |> window(every: inf)
+```
+Moving Average has the following properties:
+| Name        | Type     | Description
+| ----        | ----     | -----------
+| every       | duration | Every specifies the frequency of windows.
+| period      | duration | Period specifies the window size to mean.       
+| column      | string   | Column specifies a column to aggregate. Defaults to `"_value"`            
+
+Example:
+```
+// A 5 year moving average would be called as such:
+from(bucket: "telegraf/autogen"):
+    |> range(start: -7y)
+    |> movingAverage(every: 1y, period: 5y)
+```
+
+##### Mode
+
+Mode produces the mode for a given column. Null is considered as a potential mode if it is present. If there are multiple modes, all of them are returned in a table in sorted order. 
+If there is no mode, null is returned. The following data types are supported: string, float64, int64, uint64, bool, time.
+
+Mode has the following properties: 
+
+| Name   | Type   | Description                                                                  |
+| ----   | ----   | -----------                                                                  |
+| column | string | Column is the column on which to track the mode.  Defaults to `_value`. |
+
+Example: 
+```
+from(bucket:"telegraf/autogen")
+    |> filter(fn: (r) => r._measurement == "mem" AND
+            r._field == "used_percent")
+    |> range(start:-12h)
+    |> window(every:10m)
+    |> mode(column: "host")
+```
+
 ##### Quantile (aggregate)
 
 Quantile is both an aggregate operation and a selector operation depending on selected options.
@@ -2345,17 +2415,13 @@ When the output record drops a column that was part of the group key that column
 
 Map has the following properties:
 
-| Name     | Type                  | Description                                                                                               |
-| ----     | ----                  | -----------                                                                                               |
-| fn       | (r: record) -> record | Function to apply to each record.  The return value must be an object.                                    |
-| mergeKey | bool                  | MergeKey indicates if the record returned from fn should be merged with the group key.  Defaults to true. |
+| Name | Type                  | Description                                                            |
+| ---- | ----                  | -----------                                                            |
+| fn   | (r: record) -> record | Function to apply to each record.  The return value must be an object. |
 
 
-When merging, all columns on the group key will be added to the record giving precedence to any columns already present on the record.
-When not merging, only columns defined on the returned record will be present on the output records.
-
-
-[IMPL#816](https://github.com/influxdata/flux/issues/816) Remove mergeKey parameter from map
+The resulting table will only have columns present on the returned record of the map function.
+Use the `with` operator to preserve all columns from the input table in the output table.
 
 Example:
 ```
@@ -2365,7 +2431,8 @@ from(bucket:"telegraf/autogen")
                 r.service == "app-server")
     |> range(start:-12h)
     // Square the value
-    |> map(fn: (r) => r._value * r._value)
+    // The output table has all column from the input table because of the use of `with`.
+    |> map(fn: (r) => ({r with _value: r._value * r._value}))
 ```
 Example (creating a new table):
 ```
@@ -2375,10 +2442,12 @@ from(bucket:"telegraf/autogen")
                 r.service == "app-server")
     |> range(start:-12h)
     // create a new table by copying each row into a new format
-    |> map(fn: (r) => ({_time: r._time, app_server: r._service}))
+    // The output table now only has the columns `_time` and `app_server`.
+    |> map(fn: (r) => ({_time: r._time, app_server: r.service}))
 ```
 
 #### Reduce
+
 Reduce aggregates records in each table according to the reducer `fn`.  The output for each table will be the group key of the table, plus columns corresponding to each field in the reducer object.  
 
 If the reducer record contains a column with the same name as a group key column, then the group key column's value is overwritten, and the outgoing group key is changed.  However, if two reduced tables write to the same destination group key, then the function will error.
@@ -3224,6 +3293,22 @@ from(bucket: "telegraf/autogen")
     |> filter(fn: (r) => r._measurement == "cpu" and r._field == "usage_user")
     |> difference()
 ```
+#### Elapsed
+
+Elapsed returns the elapsed time between subsequent records. 
+
+Given an input table, `elapsed` will return the same table with an additional `elapsed` column and without the first 
+record as elapsed time is not defined. 
+
+Elapsed has the following properties:
+
+| Name        | Type     | Description                                                                                                                                                 |
+| ----        | ----     | -----------                                                                                                                                                 |
+| unit        | duration | The unit in which the elapsed time is returned. Defaults to `1s`.|
+| timeColumn  | string   | Name of the `flux.TTime` column on which to compute the elapsed time. Defaults to `_time`.|
+| columnName  | string   | Name of the column of elapsed times. Defaults to `elapsed`.
+
+Elapsed errors if the timeColumn cannot be found within the given table. 
 
 #### Increase
 
@@ -3452,7 +3537,7 @@ Contains has the following parameters:
 | value   | bool, int, uint, float, string, time          | The value to search for.     |
 | set     | array of bool, int, uint, float, string, time | The set of values to search. |
 
-Example:
+Example: 
     `contains(value:1, set:[1,2,3])` will return `true`.
 
 #### Stream/table functions
@@ -3705,15 +3790,22 @@ Example: `joinStr(arr: []string{"a", "b", "c"}, v: ",")` returns string `a,b,c`.
 
 ##### lastIndex
 
-Returns the index of the last instance of substr in s, or -1 if substr is not present in v.
+Returns the index of the last instance of substr in v, or -1 if substr is not present in v.
 
-Example: `lastIndex(v: "go gopher", t: "go")` returns int `3`.
+Example: `lastIndex(v: "go gopher", substr: "go")` returns int `3`.
 
 ##### lastIndexAny
 
 Returns the index of the last instance of any value from chars in v, or -1 if no value from chars is present in v.
 
-Example: `lastIndexAny(v: "go gopher", t: "go")` returns int `4`.
+Example: `lastIndexAny(v: "go gopher", substr: "go")` returns int `4`.
+
+##### strlen
+
+Returns the length of the given string, defined to be the number of utf code points.
+
+Example: `strlen(v: "apple")` returns the int `5`.
+Example: `strlen(v: "汉字")` returns the int `2`.
 
 ##### repeat
 
@@ -3721,11 +3813,11 @@ Returns a new string consisting of i copies of the string v.
 
 Example: `repeat("v: na", i: 2)` returns string `nana`.
 
-##### replace
+##### replace 
 
 Returns a copy of the string v with the first i non-overlapping instances of t replaced by u.
 
-Example: `replaceAll(v: "oink oink oink", t: "oink", u: "moo", i: 2)` returns string `moo moo oink`.
+Example: `replace(v: "oink oink oink", t: "oink", u: "moo", i: 2)` returns string `moo moo oink`.
 
 ##### replaceAll
 
@@ -3756,6 +3848,12 @@ Example: `splitAfterN(v: "a,b,c", t: ",", i: 2)` returns []string `["a," "b,c"]`
 Slices v into all substrings separated by t and returns a slice of the substrings between those separators. i determines the number of substrings to return.
 
 Example: `splitN(v: "a,b,c", t: ",", i: 2)` returns []string `["a" "b,c"]`.
+
+##### substring 
+
+Returns substring as specified by the given indices start and end, based on utf code points.
+
+Example: `substring(v: "influx", start: 0, end: 3)` returns string `inf`.
 
 ##### title
 
@@ -3816,6 +3914,56 @@ Example: `trimSpace(v: "  abc  ")` returns the string `abc`.
 Remove a suffix from a string. Strings that do not end with the suffix are returned unchanged.
 
 Example: `trimSuffix(v: "abc_123", suffix: "123")` returns the string `abc_`.
+
+#### Regexp Operations
+
+##### compile
+
+Parse a regular expression and return, if successful, a Regexp object that can be used to match against text.
+
+Example: `compile(v: "abcd")` returns the Regex object `abcd`.
+
+##### findString
+
+Return a string holding the text of the leftmost match in v of the regular expression.
+
+Example: `findString(r: regexp.compile("foo.?"), v: "seafood fool")` returns the string `food`.
+
+##### findStringIndex
+
+Returns a two-element slice of integers defining the location of the leftmost match in v of the regular expression.
+ 
+Example: `findStringIndex(r: regexp.compile("ab?"), v: "tablett")` returns the int array `[1 3]`.
+
+##### getString
+
+Return the source text used to compile the regular expression.
+
+Example: `getString(v: regexp.compile("abcd"))` returns the Regex object `abcd`.
+
+##### matchRegexString
+
+Report whether the string v contains any match of the regular expression r.
+
+Example: `matchString(r: regexp.compile("(gopher){2}"), v: "gophergophergopher")` returns boolean `true`
+
+##### replaceAllString
+
+Returns a copy of v, replacing matches of the Regexp r with the replacement string t.
+
+Example: `replaceAllString(r: regexp.compile("a(x*)b"), v: "-ab-axxb-", t: "T")` returns string `-T-T-`.
+
+##### quoteMeta
+
+Return a string that escapes all regular expression metacharacters inside the argument text; the returned string is a regular expression matching the literal text.
+
+Example: `quoteMeta("Escaping symbols like: .+*?()|[]{}^$")` returns string `Escaping symbols like: \.\+\*\?\(\)\|\[\]\{\}\^\$`. 
+
+##### splitRegexp
+
+Slices v into substrings separated by the expression and returns a slice of the substrings between those expression matches.
+
+Example: `splitRegex(r: regexp.compile("a*"), v: "abaabaccadaaae", i: 5)` returns string array `["", "b", "b", "c", "cadaaae"]`.
 
 ### Composite data types
 
