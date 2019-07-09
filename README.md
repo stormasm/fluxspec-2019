@@ -17,18 +17,4 @@ cp ./../fluxspec/run .
 bash run
 ```
 
-
-cp ./../fluxspec/run .
-node cli.js ./../fluxspec/spec.md > ./../fluxspec/index.md
-cd ./../fluxspec
-cat index.md spec.md > specindex.md
-```
-
 Eventually this could be automated into the flux doc build process.
-
-### First step towards automation
-
-```
-cd fluxspec
-bash run
-```
